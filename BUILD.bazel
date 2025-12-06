@@ -1,0 +1,78 @@
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@rules_kotlin//kotlin:core.bzl", "kt_kotlinc_options")
+load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
+
+# Kotlinc options
+kt_kotlinc_options(
+    name = "kotlinc_opts",
+    jvm_target = "17",
+    java_parameters = False,
+    x_optin = [],
+    x_explicit_api_mode = "off",
+)
+
+# Main Kotlin application library
+kt_jvm_library(
+    name = "app_kotlin",
+    srcs = [
+        "src/main/kotlin/com/example/Application.kt",
+        "src/main/kotlin/com/example/DoSomethingJobHandler.kt",
+        "src/main/kotlin/com/example/DoSomethingJobRequest.kt",
+        "src/main/kotlin/com/example/MyService.kt",
+    ],
+    resources = [
+        "src/main/resources/application.yml",
+    ],
+    kotlinc_opts = ":kotlinc_opts",
+    deps = [
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_h2database_h2",
+        "@maven//:org_jetbrains_kotlin_kotlin_reflect",
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        "@maven//:org_jobrunr_jobrunr_kotlin_2_1_support",
+        "@maven//:org_jobrunr_jobrunr_spring_boot_3_starter",
+        "@maven//:org_springframework_boot_spring_boot_autoconfigure",
+        "@maven//:org_springframework_boot_spring_boot_starter",
+        "@maven//:org_springframework_boot_spring_boot_starter_jdbc",
+        "@maven//:org_springframework_spring_context",
+    ],
+)
+
+# Java bridge library - lambdas here use JavaJobDetailsFinder (works)
+java_library(
+    name = "java_bridge",
+    srcs = ["src/main/java/com/example/JobrunrBridge.java"],
+    deps = [
+        ":app_kotlin",
+        "@maven//:org_jobrunr_jobrunr",
+        "@maven//:org_springframework_spring_context",
+    ],
+)
+
+# Test library - tests both the bug and the workarounds
+kt_jvm_library(
+    name = "test_lib",
+    srcs = ["src/test/kotlin/com/example/JobrunrKotlinNpeReproTest.kt"],
+    kotlinc_opts = ":kotlinc_opts",
+    deps = [
+        ":app_kotlin",
+        ":java_bridge",
+        "@maven//:org_jetbrains_kotlin_kotlin_reflect",
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_springframework_boot_spring_boot_starter_test",
+    ],
+)
+
+# JUnit 5 test runner
+java_junit5_test(
+    name = "JobrunrKotlinNpeReproTest",
+    test_class = "com.example.JobrunrKotlinNpeReproTest",
+    runtime_deps = [
+        ":test_lib",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_console",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+)

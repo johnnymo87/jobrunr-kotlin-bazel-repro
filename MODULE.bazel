@@ -1,0 +1,49 @@
+module(name = "jobrunr_kotlin_bazel_repro")
+
+bazel_dep(name = "rules_java", version = "8.6.3")
+bazel_dep(name = "rules_kotlin", version = "2.1.0")
+bazel_dep(name = "rules_jvm_external", version = "6.6")
+bazel_dep(name = "contrib_rules_jvm", version = "0.29.0")
+
+# Register Java 17 toolchain
+register_toolchains(
+    "@rules_java//toolchains:all",
+)
+
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+
+maven.install(
+    artifacts = [
+        # Spring Boot
+        "org.springframework.boot:spring-boot-starter:3.4.2",
+        "org.springframework.boot:spring-boot-starter-jdbc:3.4.2",
+        "org.springframework.boot:spring-boot-starter-test:3.4.2",
+        "org.springframework.boot:spring-boot-autoconfigure:3.4.2",
+
+        # JobRunr
+        "org.jobrunr:jobrunr-spring-boot-3-starter:8.3.0",
+        "org.jobrunr:jobrunr-kotlin-2.1-support:8.3.0",
+
+        # Kotlin
+        "org.jetbrains.kotlin:kotlin-stdlib:2.1.0",
+        "org.jetbrains.kotlin:kotlin-reflect:2.1.0",
+
+        # Jackson (required for JobRunr JsonMapper)
+        "com.fasterxml.jackson.core:jackson-databind:2.18.2",
+
+        # H2 in-memory database
+        "com.h2database:h2:2.3.232",
+
+        # JUnit 5
+        "org.junit.jupiter:junit-jupiter-api:5.11.4",
+        "org.junit.jupiter:junit-jupiter-engine:5.11.4",
+        "org.junit.platform:junit-platform-launcher:1.11.4",
+        "org.junit.platform:junit-platform-console:1.11.4",
+        "org.junit.platform:junit-platform-reporting:1.11.4",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+)
+
+use_repo(maven, "maven")
