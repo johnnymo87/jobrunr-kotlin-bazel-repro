@@ -88,7 +88,7 @@ jobScheduler.enqueue { myService.doSomething() }
 
 ## Notes
 
-- I've also filed an issue with JobRunr: [link to be added]
+- I've also filed an issue with JobRunr: https://github.com/jobrunr/jobrunr/issues/1453
 - The bytecode is functionally valid - applications run correctly
 - The issue is specifically with third-party bytecode parsing/introspection
 - I have workarounds, so this isn't blocking me, but wanted to report for visibility

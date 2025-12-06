@@ -19,14 +19,16 @@ java.lang.NullPointerException: Cannot invoke "String.endsWith(String)" because 
 git clone https://github.com/johnnymo87/jobrunr-kotlin-bazel-repro.git
 cd jobrunr-kotlin-bazel-repro
 
-# Gradle - works
+# Gradle - works (uses invokedynamic by default)
 cd gradle-project && ./gradlew test
 # Result: PASSES
 
-# Bazel - fails (from repo root)
+# Bazel - also works (configured with x_lambdas="indy")
 cd .. && bazel test //:JobrunrKotlinNpeReproTest
-# Result: NPE in KotlinJobDetailsFinder
+# Result: PASSES
 ```
+
+**Note:** This repo now includes the fix (`x_lambdas = "indy"`). To reproduce the original bug, change `x_lambdas` and `x_sam_conversions` back to `"class"` in `BUILD.bazel`.
 
 ## Environment
 
@@ -47,7 +49,7 @@ jobrunr-kotlin-bazel-repro/
 │   ├── build.gradle.kts
 │   ├── settings.gradle.kts
 │   └── src/...
-├── MODULE.bazel                    # Bazel module (root - fails)
+├── MODULE.bazel                    # Bazel module (root - fixed)
 ├── BUILD.bazel
 ├── src/main/kotlin/com/example/
 │   ├── Application.kt
@@ -62,9 +64,35 @@ jobrunr-kotlin-bazel-repro/
 └── ISSUE-RULES-KOTLIN.md           # Bug report for rules_kotlin
 ```
 
-## Workarounds
+## Root Cause
 
-Two workarounds are included that avoid the NPE:
+The issue is caused by rules_kotlin's default compiler flags. By default, `kt_kotlinc_options` sets:
+
+- `x_lambdas = "class"`
+- `x_sam_conversions = "class"`
+
+This tells the Kotlin compiler to generate lambdas as **anonymous inner classes** instead of using **`invokedynamic`** (which is the Kotlin 2.x default and what Gradle uses).
+
+JobRunr's `KotlinJobDetailsFinder` expects `invokedynamic` lambdas with `SerializedLambda` support. When it encounters class-based lambdas, the method name lookup returns `null`, causing the NPE.
+
+## The Fix
+
+Set `x_lambdas = "indy"` and `x_sam_conversions = "indy"` in your `kt_kotlinc_options`:
+
+```starlark
+kt_kotlinc_options(
+    name = "kotlinc_opts",
+    jvm_target = "17",
+    x_lambdas = "indy",
+    x_sam_conversions = "indy",
+)
+```
+
+This produces `invokedynamic` bytecode matching Gradle's output, and all JobRunr lambda patterns work correctly.
+
+## Workarounds (Alternative Approaches)
+
+If you can't use `x_lambdas = "indy"` (e.g., you need serializable lambdas), two workarounds avoid the NPE:
 
 ### 1. JobRequest/JobRequestHandler
 
@@ -89,10 +117,6 @@ jobScheduler.enqueue { myService.doSomething() }  // NPE
 // Use:
 jobrunrBridge.enqueueDoSomething(myService)  // Works
 ```
-
-## Key Finding
-
-The bug is NOT caused by the `java_parameters` flag. Testing confirmed the bug occurs regardless of `java_parameters = True` or `False`. The actual cause is a deeper difference in how rules_kotlin compiles Kotlin bytecode compared to Gradle's kotlin-gradle-plugin.
 
 ## Related Issues
 

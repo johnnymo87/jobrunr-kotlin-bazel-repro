@@ -2,13 +2,15 @@ load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 load("@rules_kotlin//kotlin:core.bzl", "kt_kotlinc_options")
 load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
 
-# Kotlinc options
+# Kotlinc options - using x_lambdas="indy" to match Gradle/Kotlin 2.x default behavior
 kt_kotlinc_options(
     name = "kotlinc_opts",
     jvm_target = "17",
     java_parameters = False,
     x_optin = [],
     x_explicit_api_mode = "off",
+    x_lambdas = "indy",
+    x_sam_conversions = "indy",
 )
 
 # Main Kotlin application library

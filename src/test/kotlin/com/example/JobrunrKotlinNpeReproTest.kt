@@ -28,25 +28,22 @@ class JobrunrKotlinNpeReproTest {
     lateinit var jobrunrBridge: JobrunrBridge
 
     // =========================================================================
-    // BUG: These tests demonstrate the NPE with Kotlin lambdas
+    // FIX VERIFICATION: With x_lambdas="indy", these should now work
     // =========================================================================
 
     @Test
-    @Disabled("Expected to fail with NPE - demonstrates the bug")
-    fun `BUG - enqueue kotlin lambda throws NPE`() {
-        // This triggers NPE in KotlinJobDetailsFinder
+    fun `enqueue kotlin lambda - works with x_lambdas=indy`() {
+        // With x_lambdas="indy", this should work like Gradle
         jobScheduler.enqueue { myService.doSomething() }
     }
 
     @Test
-    @Disabled("Expected to fail with NPE - demonstrates the bug")
-    fun `BUG - enqueue typed kotlin lambda throws NPE`() {
+    fun `enqueue typed kotlin lambda - works with x_lambdas=indy`() {
         jobScheduler.enqueue<MyService> { service -> service.doSomething() }
     }
 
     @Test
-    @Disabled("Expected to fail with NPE - demonstrates the bug")
-    fun `BUG - enqueue method reference throws NPE`() {
+    fun `enqueue method reference - works with x_lambdas=indy`() {
         jobScheduler.enqueue(myService::doSomething)
     }
 
