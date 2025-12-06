@@ -95,3 +95,6 @@ The only difference is the build tool (Gradle vs Bazel/rules_kotlin).
 **Workarounds found:**
 1. JobRequest/JobRequestHandler API - bypasses bytecode analysis entirely
 2. Java bridge - move the lambda to Java code so `JavaJobDetailsFinder` is used instead
+
+**Related issue:**
+- rules_kotlin: https://github.com/bazelbuild/rules_kotlin/issues/1417

@@ -96,5 +96,5 @@ The bug is NOT caused by the `java_parameters` flag. Testing confirmed the bug o
 
 ## Related Issues
 
-- JobRunr: [To be filed]
-- rules_kotlin: [To be filed]
+- JobRunr: https://github.com/jobrunr/jobrunr/issues/1453
+- rules_kotlin: https://github.com/bazelbuild/rules_kotlin/issues/1417
