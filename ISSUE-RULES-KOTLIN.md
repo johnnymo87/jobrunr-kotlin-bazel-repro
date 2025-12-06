@@ -30,18 +30,21 @@ java.lang.NullPointerException: Cannot invoke "String.endsWith(String)" because 
 
 ## Reproduction
 
-**Repository:** https://github.com/[TODO]/jobrunr-kotlin-bazel-repro
+**Repository:** https://github.com/johnnymo87/jobrunr-kotlin-bazel-repro
 
 The repo contains two builds of identical code:
-- Gradle build → works
-- Bazel/rules_kotlin build → fails
+- `gradle-project/` - Gradle build (works)
+- Root directory - Bazel/rules_kotlin build (fails)
 
 ```bash
+git clone https://github.com/johnnymo87/jobrunr-kotlin-bazel-repro.git
+cd jobrunr-kotlin-bazel-repro
+
 # Gradle - works
 cd gradle-project && ./gradlew test  # PASSES
 
-# Bazel - fails
-cd bazel-project && bazel test //:JobrunrKotlinNpeReproTest  # NPE
+# Bazel - fails (from repo root)
+cd .. && bazel test //:JobrunrKotlinNpeReproTest  # NPE
 ```
 
 **BUILD.bazel:**

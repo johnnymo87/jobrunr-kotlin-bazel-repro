@@ -1,6 +1,6 @@
-# JobRunr + Kotlin 2.1 NPE Reproduction (Bazel)
+# JobRunr + Kotlin 2.1 NPE Reproduction (Bazel vs Gradle)
 
-Minimal Bazel reproduction of a NullPointerException in JobRunr 8.3.0 when enqueueing Kotlin lambdas with Kotlin 2.1.
+Minimal reproduction of a NullPointerException in JobRunr 8.3.0 when enqueueing Kotlin lambdas with Kotlin 2.1 compiled by Bazel's rules_kotlin. The same code works fine when compiled with Gradle.
 
 ## The Bug
 
@@ -13,7 +13,20 @@ java.lang.NullPointerException: Cannot invoke "String.endsWith(String)" because 
     at org.jobrunr.jobs.details.KotlinJobDetailsFinder.<init>(KotlinJobDetailsFinder.java:38)
 ```
 
-The same code compiled with Gradle works correctly.
+## Quick Start
+
+```bash
+git clone https://github.com/johnnymo87/jobrunr-kotlin-bazel-repro.git
+cd jobrunr-kotlin-bazel-repro
+
+# Gradle - works
+cd gradle-project && ./gradlew test
+# Result: PASSES
+
+# Bazel - fails (from repo root)
+cd .. && bazel test //:JobrunrKotlinNpeReproTest
+# Result: NPE in KotlinJobDetailsFinder
+```
 
 ## Environment
 
@@ -26,66 +39,62 @@ The same code compiled with Gradle works correctly.
 - JDK 17
 - H2 in-memory database
 
-## Steps to Reproduce
-
-1. Run the test with Bazel:
-
-   ```bash
-   bazel test //:JobrunrKotlinNpeReproTest
-   ```
-
-2. Expected: Test fails with NPE in `KotlinJobDetailsFinder`
-
-## Key Finding
-
-**The bug is NOT caused by the `java_parameters` flag.**
-
-Initial hypothesis suggested that rules_kotlin's default `java_parameters = False` (vs Gradle's `-java-parameters` flag) was the cause. However, testing confirmed:
-
-- Bug occurs with `java_parameters = False`
-- Bug **also** occurs with `java_parameters = True`
-
-The actual cause appears to be a deeper difference in how rules_kotlin compiles Kotlin bytecode compared to Gradle's kotlin-gradle-plugin.
-
-## Comparison with Gradle
-
-A companion Gradle project at `../jobrunr-kotlin-npe-repro/` has identical code but compiles with Gradle. The Gradle tests pass successfully.
-
-```bash
-# Gradle (works)
-cd ../jobrunr-kotlin-npe-repro && ./gradlew test
-
-# Bazel (NPE)
-bazel test //:JobrunrKotlinNpeReproTest
-```
-
-## Files
+## Project Structure
 
 ```
 jobrunr-kotlin-bazel-repro/
-├── MODULE.bazel                    # Bazel module with rules_kotlin + rules_jvm_external
-├── BUILD.bazel                     # Build targets
-├── .bazelrc                        # Bazel configuration (remote JDK 17)
-├── .bazelversion                   # Bazel version (7.4.1)
+├── gradle-project/                 # Gradle build (works)
+│   ├── build.gradle.kts
+│   ├── settings.gradle.kts
+│   └── src/...
+├── MODULE.bazel                    # Bazel module (root - fails)
+├── BUILD.bazel
 ├── src/main/kotlin/com/example/
-│   ├── Application.kt              # Spring Boot application
-│   └── MyService.kt                # Simple service
-├── src/main/resources/
-│   └── application.yml             # Spring/JobRunr config
+│   ├── Application.kt
+│   ├── MyService.kt
+│   ├── DoSomethingJobRequest.kt    # Workaround 1
+│   └── DoSomethingJobHandler.kt    # Workaround 1
+├── src/main/java/com/example/
+│   └── JobrunrBridge.java          # Workaround 2
 ├── src/test/kotlin/com/example/
-│   └── JobrunrKotlinNpeReproTest.kt  # Test that reproduces NPE
-└── README.md
+│   └── JobrunrKotlinNpeReproTest.kt
+├── ISSUE-JOBRUNR.md                # Bug report for JobRunr
+└── ISSUE-RULES-KOTLIN.md           # Bug report for rules_kotlin
 ```
 
-## Investigation Notes
+## Workarounds
 
-JobRunr's `KotlinJobDetailsFinder` uses ASM to parse bytecode and extract job method details from Kotlin lambdas. The NPE occurs because `name` is null when calling `JobDetailsBuilder.setMethodName()`.
+Two workarounds are included that avoid the NPE:
 
-This suggests rules_kotlin produces bytecode that is structured differently from Gradle-compiled Kotlin, causing the ASM-based parsing to fail.
+### 1. JobRequest/JobRequestHandler
 
-To investigate further, bytecode comparison between Gradle and Bazel builds would be useful:
+Bypasses bytecode analysis entirely:
 
-```bash
-# Compare lambda bytecode
-javap -v -classpath bazel-bin/app.jar 'com.example.JobrunrKotlinNpeReproTest$...'
+```kotlin
+// Instead of:
+jobScheduler.enqueue { myService.doSomething() }  // NPE
+
+// Use:
+jobRequestScheduler.enqueue(DoSomethingJobRequest("message"))  // Works
 ```
+
+### 2. Java Bridge
+
+Move the lambda to Java code so `JavaJobDetailsFinder` is used:
+
+```kotlin
+// Instead of:
+jobScheduler.enqueue { myService.doSomething() }  // NPE
+
+// Use:
+jobrunrBridge.enqueueDoSomething(myService)  // Works
+```
+
+## Key Finding
+
+The bug is NOT caused by the `java_parameters` flag. Testing confirmed the bug occurs regardless of `java_parameters = True` or `False`. The actual cause is a deeper difference in how rules_kotlin compiles Kotlin bytecode compared to Gradle's kotlin-gradle-plugin.
+
+## Related Issues
+
+- JobRunr: [To be filed]
+- rules_kotlin: [To be filed]

@@ -38,21 +38,24 @@ The bytecode produced by rules_kotlin is valid - the application runs correctly.
 
 ## How to reproduce?
 
-**Reproduction repository:** https://github.com/[TODO]/jobrunr-kotlin-bazel-repro
+**Reproduction repository:** https://github.com/johnnymo87/jobrunr-kotlin-bazel-repro
 
 The repo contains two builds of identical Kotlin code:
 - `gradle-project/` - Gradle build (works)
-- `bazel-project/` - Bazel build with rules_kotlin 2.1.0 (fails)
+- Root directory - Bazel build with rules_kotlin 2.1.0 (fails)
 
 **To reproduce:**
 ```bash
+git clone https://github.com/johnnymo87/jobrunr-kotlin-bazel-repro.git
+cd jobrunr-kotlin-bazel-repro
+
 # Gradle - works
 cd gradle-project
 ./gradlew test
 # Result: PASSES
 
-# Bazel - fails
-cd bazel-project
+# Bazel - fails (from repo root)
+cd ..
 bazel test //:JobrunrKotlinNpeReproTest
 # Result: NPE in KotlinJobDetailsFinder
 ```
